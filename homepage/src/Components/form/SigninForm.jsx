@@ -1,5 +1,5 @@
 import { useFormik } from 'formik';
-import { loginUser } from '../../Utils/auth';
+import { useNavigate } from 'react-router-dom';
 
 const validate = (values) => {
   const errors = {};
@@ -18,6 +18,8 @@ const validate = (values) => {
 };
 
 const SigninForm = () => {
+  const navigate = useNavigate();
+
   const formik = useFormik({
     initialValues: {
       email: '',
@@ -45,15 +47,15 @@ const SigninForm = () => {
         if (data.accessToken) {
           localStorage.setItem('accessToken', data.accessToken);
           
-          // 2. Dispatch event so other components (like RightLog) know token changed
+          // 2. Dispatch storage event for other listeners
           window.dispatchEvent(new Event("storage"));
         }
 
         alert('Login successful!');
         resetForm();
         
-        // 3. Reload page or redirect so RightLog re-mounts and fetches contacts
-        window.location.reload();
+        // 3. Clean redirect to Dashboard without reloading page
+        navigate('/dashboard');
 
       } catch (error) {
         console.error('Submission error:', error);
@@ -99,7 +101,6 @@ const SigninForm = () => {
 
       <button
         disabled={formik.isSubmitting}
-        onClick={loginUser}
         className="h-8 m-2 rounded-xl bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 text-white font-semibold disabled:opacity-50 cursor-pointer"
         type="submit"
       >

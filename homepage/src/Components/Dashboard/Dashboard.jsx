@@ -1,12 +1,38 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import AddContactForm from "../form/AddContactForm/AddContactForm";
 import RightLog from "../log/RightLog";
 import { logoutUser } from "../../Utils/auth";
 import Navbar from "../navigation/Navbar";
 
 const UserDashboard = () => {
-  // Key state used to trigger a re-fetch in RightLog whenever a contact is added or updated externally
+  const navigate = useNavigate();
+  
+  // 1. Track authentication status based on existing token
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    !!localStorage.getItem("accessToken") || !!localStorage.getItem("token")
+  );
+
+  // Key state used to trigger a re-fetch in RightLog
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // 2. Sync token state if it changes or gets deleted
+  useEffect(() => {
+    const checkAuthStatus = () => {
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+      setIsAuthenticated(!!token);
+    };
+
+    // Listen for storage events (e.g. token cleared on logout or expiry)
+    window.addEventListener("storage", checkAuthStatus);
+    return () => window.removeEventListener("storage", checkAuthStatus);
+  }, []);
+
+  const handleLogout = () => {
+    logoutUser(); // Call your existing logout utility
+    setIsAuthenticated(false); // Update local state immediately
+    navigate("/login"); // Redirect user to Login page
+  };
 
   const handleContactChange = () => {
     setRefreshKey((prevKey) => prevKey + 1);
@@ -29,12 +55,22 @@ const UserDashboard = () => {
             </p>
           </div>
 
-          <button
-            onClick={logoutUser}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-300 text-xs sm:text-sm font-medium transition-all duration-200 cursor-pointer text-center"
-          >
-            Log Out
-          </button>
+          {/* 3. Conditional Button: Shows 'Log Out' if logged in, 'Login' if expired/logged out */}
+          {isAuthenticated ? (
+            <button
+              onClick={handleLogout}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-300 text-xs sm:text-sm font-medium transition-all duration-200 cursor-pointer text-center"
+            >
+              Log Out
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 border border-indigo-400/30 text-white text-xs sm:text-sm font-medium transition-all duration-200 cursor-pointer text-center"
+            >
+              Login
+            </Link>
+          )}
         </header>
 
         {/* Responsive Grid Layout for CRUD Workspace */}

@@ -145,7 +145,7 @@ const RightLog = () => {
         <h2 className="text-base sm:text-lg font-bold text-white capitalize">
           {userName ? `Welcome, ${userName}` : "Your Saved Contacts"}
         </h2>
-        <span className="text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full font-mono">
+        <span className="text-xs bg-indigo-500/20 text-white border border-indigo-500/30 px-3 py-1 rounded-full font-mono">
           {contacts.length} {contacts.length === 1 ? "Contact" : "Contacts"}
         </span>
       </div>
@@ -174,7 +174,7 @@ const RightLog = () => {
             {contacts.map((contact) => (
               <li
                 key={contact._id}
-                className="p-3 sm:p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all flex flex-col gap-3"
+                className="p-3 sm:p-4 text-white rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all flex flex-col gap-3"
               >
                 {/* 📝 CONDITIONAL EDIT MODE */}
                 {editingId === contact._id ? (
