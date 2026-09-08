@@ -1,23 +1,28 @@
+
 const express = require("express");
 const { 
   registerUser, 
+  verifyOtp, 
+  resendOtp, 
   loginUser, 
+  forgotPassword,
+  verifyResetOtp,
+  resetPassword,
   currentUser, 
-  getUsers // 1. Import getUsers controller
+  getUsers ,
 } = require("../Controllers/userController"); 
 
 const validateToken = require("../middleware/validateTokenHandler");
-
 const router = express.Router();
 
-// Public route to fetch all registered users for RightRegi
 router.get("/", getUsers);
-
-// Registration & Login routes
 router.post("/register", registerUser);
 router.post("/login", loginUser);
-
-// Protected route
+router.post("/verify-otp", verifyOtp);
+router.post("/resend-otp", resendOtp);
 router.get("/current", validateToken, currentUser);
+router.post("/forgot-password", forgotPassword);
+router.post("/verify-reset-otp", verifyResetOtp);
+router.post("/reset-password", resetPassword);
 
 module.exports = router;

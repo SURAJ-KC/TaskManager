@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Layout, ArrowRight, Trash2, Clock, FolderPlus } from 'lucide-react';
 import boardService from '../services/boardService';
-import Navbar from '../../../Components/navigation/Navbar'
+import UserNav from '../../../Components/navigation/UserNav'
 const BoardList = () => {
   const [boards, setBoards] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,14 +14,10 @@ const BoardList = () => {
 
   const navigate = useNavigate();
 
-  // Load user boards on component mount
-  useEffect(() => {
-    fetchBoards();
-  }, []);
-
-  const fetchBoards = async () => {
+  const fetchBoards = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await boardService.getBoards();
       setBoards(data);
     } catch (err) {
@@ -29,7 +25,12 @@ const BoardList = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Load user boards on component mount
+  useEffect(() => {
+    queueMicrotask(fetchBoards);
+  }, [fetchBoards]);
 
   const handleCreateBoard = async (e) => {
     e.preventDefault();
@@ -41,7 +42,7 @@ const BoardList = () => {
         title: newTitle,
         description: newDescription,
       });
-      setBoards([createdBoard, ...boards]);
+      setBoards((currentBoards) => [createdBoard, ...currentBoards]);
       setNewTitle('');
       setNewDescription('');
       setIsModalOpen(false);
@@ -58,9 +59,11 @@ const BoardList = () => {
 
     try {
       await boardService.deleteBoard(boardId);
-      setBoards(boards.filter((b) => b._id !== boardId));
+      setBoards((currentBoards) =>
+        currentBoards.filter((board) => board._id !== boardId)
+      );
     } catch (err) {
-      alert('Failed to delete board');
+      alert(err.message || 'Failed to delete board');
     }
   };
 
@@ -75,7 +78,7 @@ const BoardList = () => {
 
   return (
     <div>
-    <Navbar />
+    <UserNav />
     <div className="min-h-screen bg-slate-950 text-slate-100 p-8">
       {/* Header Bar */}
       <div className="max-w-7xl mx-auto flex justify-between items-center mb-8 border-b border-slate-800 pb-6">

@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from "react";
+import  { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AddContactForm from "../form/AddContactForm/AddContactForm";
 import RightLog from "../log/RightLog";
 import { logoutUser } from "../../Utils/auth";
-import Navbar from "../navigation/Navbar";
+import UserNav from "../navigation/UserNav";
 
 const UserDashboard = () => {
   const navigate = useNavigate();
   
   // 1. Track authentication status based on existing token
   const [isAuthenticated, setIsAuthenticated] = useState(
-    !!localStorage.getItem("accessToken") || !!localStorage.getItem("token")
+    !!localStorage.getItem("accessToken")
   );
 
   // Key state used to trigger a re-fetch in RightLog
@@ -19,7 +19,7 @@ const UserDashboard = () => {
   // 2. Sync token state if it changes or gets deleted
   useEffect(() => {
     const checkAuthStatus = () => {
-      const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+      const token = localStorage.getItem("accessToken");
       setIsAuthenticated(!!token);
     };
 
@@ -41,7 +41,7 @@ const UserDashboard = () => {
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
       {/* Top Navigation */}
-      <Navbar />
+      <UserNav />
 
       <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 flex flex-col gap-6">
         {/* Workspace Banner */}

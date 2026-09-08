@@ -1,17 +1,20 @@
 import { useFormik } from 'formik';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { apiRequest } from '../../services/apiClient';
+import { useState } from 'react';
 
 const validate = (values) => {
   const errors = {};
 
   if (!values.email) {
-    errors.email = 'Required : Email Address';
+    errors.email = 'Required';
   } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test(values.email)) {
     errors.email = 'Invalid email address';
   }
 
   if (!values.password) {
-    errors.password = 'Required : Password';
+    errors.password = 'Required';
   }
 
   return errors;
@@ -19,6 +22,7 @@ const validate = (values) => {
 
 const SigninForm = () => {
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
 
   const formik = useFormik({
     initialValues: {
@@ -28,38 +32,26 @@ const SigninForm = () => {
     validate,
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       try {
-        const response = await fetch('http://localhost:5000/api/users/login', {
+        const data = await apiRequest('/users/login', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify(values),
         });
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          alert(data.message || 'Login failed');
-          return;
+        if (!data.accessToken) {
+          throw new Error('Login succeeded without an access token.');
         }
 
-        // 1. Save JWT token returned from backend
-        if (data.accessToken) {
-          localStorage.setItem('accessToken', data.accessToken);
-          
-          // 2. Dispatch storage event for other listeners
-          window.dispatchEvent(new Event("storage"));
-        }
+        localStorage.setItem('accessToken', data.accessToken);
+        toast.success(`Welcome back, ${data.user?.username || 'User'}!`);
 
-        alert('Login successful!');
         resetForm();
         
-        // 3. Clean redirect to Dashboard without reloading page
+        // 3. Clean redirect to Dashboard
         navigate('/dashboard');
 
       } catch (error) {
         console.error('Submission error:', error);
-        alert('Server error. Please ensure backend is running.');
+        toast.error(error.message || 'Server error. Please ensure backend is running.');
       } finally {
         setSubmitting(false);
       }
@@ -68,43 +60,70 @@ const SigninForm = () => {
 
   return (
     <form
-      className="flex flex-col px-2 m-2 py-1 border border-white/20 rounded-xl text-white"
+      className="w-full flex flex-col gap-3.5 text-white"
       onSubmit={formik.handleSubmit}
     >
-      <input
-        className="px-2 m-2 py-1 border border-white/20 rounded-xl text-white"
-        id="email"
-        name="email"
-        type="email"
-        placeholder="Email ID"
-        onChange={formik.handleChange}
-        onBlur={formik.handleBlur}
-        value={formik.values.email}
-      />
-      {formik.touched.email && formik.errors.email && (
-        <div className="text-red-500 text-sm px-2">{formik.errors.email}</div>
-      )}
+      {/* Email Input */}
+      <div>
+        <input
+          className="w-full px-3.5 py-2.5 rounded-xl text-sm border border-white/20 bg-slate-950/40 text-white placeholder-gray-400 outline-none focus:border-purple-500 transition"
+          id="email"
+          name="email"
+          type="email"
+          placeholder="Email Address"
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+          value={formik.values.email}
+        />
+        {formik.touched.email && formik.errors.email && (
+          <div className="text-red-400 text-xs px-1 mt-1">{formik.errors.email}</div>
+        )}
+      </div>
 
-      <input
-        className="px-2 m-2 py-1 border border-white/20 rounded-xl text-white"
-        id="password"
-        name="password"
-        type="password"
-        placeholder="Enter Password"
-        onChange={formik.handleChange}
-        onBlur={formik.handleBlur}
-        value={formik.values.password}
-      />
-      {formik.touched.password && formik.errors.password && (
-        <div className="text-red-500 text-sm px-2">{formik.errors.password}</div>
-      )}
+      {/* Password Input with Embedded Show/Hide Toggle */}
+      <div>
+        <div className="relative flex items-center">
+          <input
+            className="w-full px-3.5 py-2.5 pr-14 rounded-xl text-sm border border-white/20 bg-slate-950/40 text-white placeholder-gray-400 outline-none focus:border-purple-500 transition"
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            placeholder="Password"
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            value={formik.values.password}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            className="absolute right-3.5 text-xs text-gray-400 hover:text-white transition select-none cursor-pointer"
+          >
+            {showPassword ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {formik.touched.password && formik.errors.password && (
+          <div className="text-red-400 text-xs px-1 mt-1">{formik.errors.password}</div>
+        )}
+      </div>
 
+      {/* Forgot Password Link */}
+      <div className="flex justify-end px-1 -mt-1">
+        <button
+          type="button"
+          onClick={() => navigate('/forgot-password')}
+          className="text-xs text-purple-400 hover:text-purple-300 hover:underline transition-colors cursor-pointer bg-transparent border-none"
+        >
+          Forgot Password?
+        </button>
+      </div>
+
+      {/* Submit Button */}
       <button
         disabled={formik.isSubmitting}
-        className="h-8 m-2 rounded-xl bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 text-white font-semibold disabled:opacity-50 cursor-pointer"
+        className="w-full py-2.5 mt-1 rounded-xl bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 text-white font-semibold text-sm hover:opacity-95 active:scale-[0.99] disabled:opacity-50 transition cursor-pointer shadow-lg shadow-purple-500/20"
         type="submit"
       >
-        {formik.isSubmitting ? 'Logging in...' : 'Submit'}
+        {formik.isSubmitting ? 'Logging in...' : 'Sign In'}
       </button>
     </form>
   );

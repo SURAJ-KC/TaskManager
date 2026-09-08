@@ -1,33 +1,60 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Search, Filter, X, Plus } from 'lucide-react';
+import { Search, Filter, X } from 'lucide-react';
 import { DragDropContext } from '@hello-pangea/dnd';
 import ListColumn from './ListColumn';
 import boardService from '../services/boardService';
+import TaskDetailModal from './TaskDetailModel';
 
 const BoardView = () => {
   const { id: boardId } = useParams();
 
   const [boardData, setBoardData] = useState({ board: null, lists: [], tasks: [] });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedTask, setSelectedTask] = useState(null);
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPriority, setSelectedPriority] = useState('All'); // 'All' | 'Low' | 'Medium' | 'High'
 
-  useEffect(() => {
-    fetchBoardData();
-  }, [boardId]);
-
-  const fetchBoardData = async () => {
+  const fetchBoardData = useCallback(async () => {
     try {
       setLoading(true);
+      setError('');
       const data = await boardService.getBoardDetails(boardId);
       setBoardData(data);
     } catch (err) {
       console.error('Error loading board data:', err);
+      setError(err.message || 'Unable to load this board.');
     } finally {
       setLoading(false);
+    }
+  }, [boardId]);
+
+  useEffect(() => {
+    queueMicrotask(fetchBoardData);
+  }, [fetchBoardData]);
+
+  const handleAddTask = async (listId, title) => {
+    try {
+      const task = await boardService.createTask(listId, { title });
+      setBoardData((prev) => ({ ...prev, tasks: [...prev.tasks, task] }));
+    } catch (err) {
+      setError(err.message || 'Unable to create task.');
+    }
+  };
+
+  const handleUpdateTask = async (taskId, updateData) => {
+    try {
+      const updatedTask = await boardService.updateTask(taskId, updateData);
+      setBoardData((prev) => ({
+        ...prev,
+        tasks: prev.tasks.map((task) => task._id === taskId ? { ...task, ...updatedTask } : task),
+      }));
+      setSelectedTask((task) => task?._id === taskId ? { ...task, ...updatedTask } : task);
+    } catch (err) {
+      setError(err.message || 'Unable to update task.');
     }
   };
 
@@ -89,6 +116,14 @@ const BoardView = () => {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 text-sm">
         Loading workspace board...
+      </div>
+    );
+  }
+
+  if (error && !boardData.board) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-rose-300 text-sm">
+        {error}
       </div>
     );
   }
@@ -170,12 +205,20 @@ const BoardView = () => {
                   key={list._id}
                   list={list}
                   tasks={listTasks}
+                  onAddTask={handleAddTask}
+                  onTaskClick={setSelectedTask}
                 />
               );
             })}
           </div>
         </main>
       </DragDropContext>
+      <TaskDetailModal
+        isOpen={Boolean(selectedTask)}
+        task={selectedTask}
+        onClose={() => setSelectedTask(null)}
+        onUpdateTask={handleUpdateTask}
+      />
     </div>
   );
 };

@@ -1,6 +1,11 @@
 const Comment = require('../models/comment');
 const Task = require('../models/Task');
 
+const findOwnedTask = (taskId, userId) => Task.findOne({ _id: taskId }).populate({
+  path: 'listId',
+  populate: { path: 'boardId', match: { owner: userId } },
+});
+
 // Add a new comment to a task
 const addComment = async (req, res) => {
   try {
@@ -14,8 +19,8 @@ const addComment = async (req, res) => {
     }
 
     // 2. Check if the target task exists
-    const task = await Task.findById(taskId);
-    if (!task) {
+    const task = await findOwnedTask(taskId, req.user._id);
+    if (!task || !task.listId || !task.listId.boardId) {
       return res.status(404).json({ message: 'Task not found' });
     }
 
@@ -44,6 +49,11 @@ const getCommentsByTask = async (req, res) => {
   try {
     const { id: taskId } = req.params;
 
+    const task = await findOwnedTask(taskId, req.user._id);
+    if (!task || !task.listId || !task.listId.boardId) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
     const comments = await Comment.find({ taskId })
       .populate('userId', 'name email avatar')
       .sort({ createdAt: -1 });
@@ -62,6 +72,11 @@ const deleteComment = async (req, res) => {
 
     const comment = await Comment.findById(commentId);
     if (!comment) {
+      return res.status(404).json({ message: 'Comment not found' });
+    }
+
+    const task = await findOwnedTask(comment.taskId, req.user._id);
+    if (!task || !task.listId || !task.listId.boardId) {
       return res.status(404).json({ message: 'Comment not found' });
     }
 

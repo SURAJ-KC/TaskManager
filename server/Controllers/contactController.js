@@ -1,5 +1,4 @@
 const asyncHandler = require("express-async-handler");
-const bcrypt = require("bcrypt");
 const Contact = require("../models/contactModel");
 
 //@desc Get all contacts
@@ -14,18 +13,16 @@ const getContacts = asyncHandler(async (req, res) => {
 //@route POST /api/contacts
 //@access private
 const createContact = asyncHandler(async (req, res) => {
-    const { firstname, lastname, email, phone, password } = req.body;
-    if (!firstname || !lastname || !email || !phone || !password) {
+    const { firstname, lastname, email, phone } = req.body;
+    if (!firstname || !lastname || !email || !phone) {
         res.status(400);
         throw new Error("All Fields are Mandatory!");
     }
-    const hashedPassword = await bcrypt.hash(password, 10);
     const contact = await Contact.create({
         firstname,
         lastname,
         email,
         phone,
-        password: hashedPassword,
         user_id: req.user.id,
     });
     res.status(201).json(contact);
@@ -87,4 +84,10 @@ const deleteContact = asyncHandler(async (req, res) => {
     res.status(200).json(contact);
 });
 
-module.exports = { getContacts, createContact, updateContact, getContact, deleteContact };
+module.exports = {
+    getContacts,
+    createContact,
+    updateContact,
+    getContact,
+    deleteContact,
+};

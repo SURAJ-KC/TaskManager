@@ -10,7 +10,8 @@ const globalSearch = async (req, res) => {
       return res.json({ boards: [], tasks: [] });
     }
 
-    const searchRegex = new RegExp(q, 'i');
+    const escapedQuery = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const searchRegex = new RegExp(escapedQuery, 'i');
 
     // 1. Search user's boards
     const boards = await Board.find({
@@ -31,7 +32,7 @@ const globalSearch = async (req, res) => {
       $or: [{ title: searchRegex }, { description: searchRegex }],
     })
       .populate('listId', 'title boardId')
-      .populate('assignedTo', 'name email')
+      .populate('assignedTo', 'username email')
       .limit(10);
 
     res.json({ boards, tasks });

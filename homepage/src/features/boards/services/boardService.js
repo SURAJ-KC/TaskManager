@@ -1,22 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000/api';
-
-// Helper function to build headers with Bearer Token
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('accessToken');
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-};
-
-// Generic response handler to parse JSON & handle HTTP errors
-const handleResponse = async (response) => {
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Request failed with status ${response.status}`);
-  }
-  return response.json();
-};
+import API_BASE_URL, { getAuthHeaders, handleResponse } from '../../../services/apiClient';
 
 const boardService = {
   // ================= BOARDS =================

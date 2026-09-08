@@ -1,5 +1,5 @@
-import React from 'react';
-import { Clock, MessageSquare, AlertCircle } from 'lucide-react';
+
+import { Clock, MessageSquare } from 'lucide-react';
 import { Draggable } from '@hello-pangea/dnd';
 
 const priorityStyles = {
@@ -82,10 +82,10 @@ const TaskCard = ({ task, index, onClick }) => {
                   {assignedTo.slice(0, 3).map((user, idx) => (
                     <div
                       key={user._id || idx}
-                      title={user.name}
+                      title={user.username || user.name}
                       className="h-6 w-6 rounded-full ring-2 ring-slate-800 bg-indigo-600 flex items-center justify-center text-[10px] font-medium text-white uppercase"
                     >
-                      {user.name ? user.name[0] : 'U'}
+                      {(user.username || user.name || 'U')[0]}
                     </div>
                   ))}
                   {assignedTo.length > 3 && (

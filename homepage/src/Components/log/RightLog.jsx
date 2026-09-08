@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getValidToken, logoutUser } from "../../Utils/auth";
 
 const RightLog = () => {
   const [contacts, setContacts] = useState([]);
-  const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState(null);
@@ -17,53 +16,56 @@ const RightLog = () => {
     phone: "",
   });
 
-  const fetchContacts = async () => {
+  // Pure state derivation: Decode username directly from token on render without setState
+  const userName = useMemo(() => {
     const token = getValidToken();
-
-    if (!token) {
-      setError("Session expired or token missing. Please log in again.");
-      setLoading(false);
-      return;
-    }
-
+    if (!token) return "";
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
-      if (payload?.user?.username) {
-        setUserName(payload.user.username);
-      }
-    } catch (e) {
-      console.error("Token decoding failed", e);
+      return payload?.user?.username || "";
+    } catch {
+      return "";
     }
+  }, []);
 
-    try {
-      const response = await fetch("http://localhost:5000/api/contacts", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  useEffect(() => {
+    const fetchContacts = async () => {
+      const token = getValidToken();
 
-      if (response.status === 401) {
-        logoutUser();
+      if (!token) {
+        setError("Session expired or token missing. Please log in again.");
+        setLoading(false);
         return;
       }
 
-      const data = await response.json();
+      try {
+        const response = await fetch("http://localhost:5000/api/contacts", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch contacts");
+        if (response.status === 401) {
+          logoutUser();
+          return;
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to fetch contacts");
+        }
+
+        setContacts(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      setContacts(Array.isArray(data) ? data : []);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
     fetchContacts();
   }, []);
 

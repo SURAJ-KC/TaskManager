@@ -5,7 +5,7 @@ const Task = require('../models/Task');
 // Get all boards for the authenticated user
 const getBoards = async (req, res) => {
   try {
-    const boards = await Board.find({ userId: req.user._id }).sort('-createdAt');
+    const boards = await Board.find({ owner: req.user._id }).sort('-createdAt');
     res.json(boards);
   } catch (error) {
     console.error("Error fetching boards:", error);
@@ -20,7 +20,7 @@ const createBoard = async (req, res) => {
     const board = new Board({
       title,
       description,
-      userId: req.user._id,
+      owner: req.user._id,
     });
     await board.save();
     res.status(201).json(board);
@@ -35,7 +35,7 @@ const getBoardDetails = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const board = await Board.findById(id);
+    const board = await Board.findOne({ _id: id, owner: req.user._id });
     if (!board) {
       return res.status(404).json({ message: "Board not found" });
     }
@@ -55,7 +55,11 @@ const getBoardDetails = async (req, res) => {
 const updateBoard = async (req, res) => {
   try {
     const { id } = req.params;
-    const updatedBoard = await Board.findByIdAndUpdate(id, req.body, { new: true });
+    const updatedBoard = await Board.findOneAndUpdate(
+      { _id: id, owner: req.user._id },
+      { $set: req.body },
+      { new: true, runValidators: true }
+    );
     if (!updatedBoard) return res.status(404).json({ message: "Board not found" });
     res.json(updatedBoard);
   } catch (error) {
@@ -68,11 +72,12 @@ const updateBoard = async (req, res) => {
 const deleteBoard = async (req, res) => {
   try {
     const { id } = req.params;
-    await Board.findByIdAndDelete(id);
-    const lists = await List.find({ boardId: id });
+    const board = await Board.findOneAndDelete({ _id: id, owner: req.user._id });
+    if (!board) return res.status(404).json({ message: "Board not found" });
+    const lists = await List.find({ boardId: board._id });
     const listIds = lists.map(l => l._id);
     await Task.deleteMany({ listId: { $in: listIds } });
-    await List.deleteMany({ boardId: id });
+    await List.deleteMany({ boardId: board._id });
     res.json({ message: "Board deleted successfully" });
   } catch (error) {
     console.error("Error deleting board:", error);
@@ -85,6 +90,9 @@ const createList = async (req, res) => {
   try {
     const { id: boardId } = req.params;
     const { title } = req.body;
+
+    const board = await Board.findOne({ _id: boardId, owner: req.user._id });
+    if (!board) return res.status(404).json({ message: "Board not found" });
     
     const count = await List.countDocuments({ boardId });
     const list = new List({
@@ -104,7 +112,11 @@ const createList = async (req, res) => {
 const updateList = async (req, res) => {
   try {
     const { id } = req.params;
-    const updatedList = await List.findByIdAndUpdate(id, req.body, { new: true });
+    const list = await List.findOne({ _id: id }).populate('boardId');
+    if (!list || !list.boardId || String(list.boardId.owner) !== String(req.user._id)) {
+      return res.status(404).json({ message: "List not found" });
+    }
+    const updatedList = await List.findByIdAndUpdate(id, { $set: req.body }, { new: true, runValidators: true });
     if (!updatedList) return res.status(404).json({ message: "List not found" });
     res.json(updatedList);
   } catch (error) {
@@ -117,8 +129,12 @@ const updateList = async (req, res) => {
 const deleteList = async (req, res) => {
   try {
     const { id } = req.params;
-    await Task.deleteMany({ listId: id });
-    await List.findByIdAndDelete(id);
+    const list = await List.findOne({ _id: id }).populate('boardId');
+    if (!list || !list.boardId || String(list.boardId.owner) !== String(req.user._id)) {
+      return res.status(404).json({ message: "List not found" });
+    }
+    await Task.deleteMany({ listId: list._id });
+    await List.findByIdAndDelete(list._id);
     res.json({ message: "List deleted successfully" });
   } catch (error) {
     console.error("Error deleting list:", error);
@@ -131,6 +147,10 @@ const reorderList = async (req, res) => {
   try {
     const { id } = req.params;
     const { position } = req.body;
+    const existingList = await List.findOne({ _id: id }).populate('boardId');
+    if (!existingList || !existingList.boardId || String(existingList.boardId.owner) !== String(req.user._id)) {
+      return res.status(404).json({ message: "List not found" });
+    }
     const list = await List.findByIdAndUpdate(id, { position }, { new: true });
     res.json(list);
   } catch (error) {

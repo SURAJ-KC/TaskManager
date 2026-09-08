@@ -2,6 +2,7 @@
 const mongoose = require("mongoose");
 const boardSchema = new mongoose.Schema({
   title: { type: String, required: true },
+  description: { type: String, default: '' },
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true });
 
@@ -28,3 +29,5 @@ const commentSchema = new mongoose.Schema({
   taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', required: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true });
+
+module.exports = mongoose.model('Board', boardSchema);

@@ -1,5 +1,4 @@
 
-const { Timestamp } = require("mongodb");
 const mongoose = require("mongoose");
 
 const contactSchema = mongoose.Schema(
@@ -17,8 +16,6 @@ const contactSchema = mongoose.Schema(
     },
     phone:{type:String, required:[true,"Please Add the Contact Phone Number"]
     },
-    password:{type:String, required:[true,"Please Add the Password"]
-    },
-},{ Timestamp : true});
+},{ timestamps: true });
 
 module.exports = mongoose.model("Contact",contactSchema);

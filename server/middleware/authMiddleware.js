@@ -5,7 +5,11 @@ const User = require('../models/userModel');
 const protect = async (req, res, next) => {
   let token;
 
-  const secret = process.env.JWT_SECRET || 'default_jwt_secret_key_change_in_production';
+  const secret = process.env.ACCESS_TOKEN_SECRET;
+
+  if (!secret) {
+    return res.status(500).json({ message: 'Authentication is not configured' });
+  }
 
   if (
     req.headers.authorization &&
@@ -21,7 +25,7 @@ const protect = async (req, res, next) => {
       // Verify using the secret variable
       const decoded = jwt.verify(token, secret);
 
-      const userId = decoded.id || decoded._id;
+      const userId = decoded.user?.id || decoded.id || decoded._id;
       req.user = await User.findById(userId).select('-password');
 
       if (!req.user) {

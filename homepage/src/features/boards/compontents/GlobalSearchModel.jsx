@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import  { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Layout, CheckSquare, X, ArrowRight, Loader2 } from 'lucide-react';
 import boardService from '../services/boardService';
@@ -12,7 +12,7 @@ const GlobalSearchModal = ({ isOpen, onClose }) => {
   // Debounced Search Request
   useEffect(() => {
     if (!query.trim()) {
-      setResults({ boards: [], tasks: [] });
+      queueMicrotask(() => setResults({ boards: [], tasks: [] }));
       return;
     }
 

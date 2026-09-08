@@ -14,7 +14,6 @@ const validate = (values) => {
   }
 
   if (!values.phone) errors.phone = 'Required : Phone Number';
-  if (!values.password) errors.password = 'Required : Password';
 
   return errors;
 };
@@ -26,7 +25,6 @@ const AddContactForm = ({ onContactAdded }) => {
       lastname: '',
       email: '',
       phone: '',
-      password: '',
     },
     validate,
     onSubmit: async (values, { setSubmitting, resetForm, setFieldError }) => {
@@ -143,22 +141,6 @@ const AddContactForm = ({ onContactAdded }) => {
           )}
         </div>
 
-        {/* Password */}
-        <div className="flex flex-col">
-          <input
-            id="password"
-            name="password"
-            type="password"
-            placeholder="Contact Password"
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-            value={formik.values.password}
-            className="px-3 py-2 bg-black/30 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500"
-          />
-          {formik.touched.password && formik.errors.password && (
-            <span className="text-red-400 text-xs mt-1 pl-1">{formik.errors.password}</span>
-          )}
-        </div>
 
         {/* Submit Button */}
         <button
