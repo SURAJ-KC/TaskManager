@@ -1,5 +1,10 @@
 import { useEffect, useState, useMemo } from "react";
+import axios from "axios";
 import { getValidToken, logoutUser } from "../../Utils/auth";
+
+// Dynamic API Base URL targeting live Render backend
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "https://taskmanager-1dan.onrender.com/api";
 
 const RightLog = () => {
   const [contacts, setContacts] = useState([]);
@@ -39,28 +44,20 @@ const RightLog = () => {
       }
 
       try {
-        const response = await fetch("http://localhost:5000/api/contacts", {
-          method: "GET",
+        const response = await axios.get(`${API_BASE_URL}/contacts`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
         });
 
-        if (response.status === 401) {
+        setContacts(Array.isArray(response.data) ? response.data : []);
+      } catch (err) {
+        if (err.response?.status === 401) {
           logoutUser();
           return;
         }
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || "Failed to fetch contacts");
-        }
-
-        setContacts(Array.isArray(data) ? data : []);
-      } catch (err) {
-        setError(err.message);
+        setError(err.response?.data?.message || err.message || "Failed to fetch contacts");
       } finally {
         setLoading(false);
       }
@@ -76,19 +73,20 @@ const RightLog = () => {
 
     try {
       setDeletingId(id);
-      const response = await fetch(`http://localhost:5000/api/contacts/${id}`, {
-        method: "DELETE",
+      await axios.delete(`${API_BASE_URL}/contacts/${id}`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) throw new Error("Failed to delete contact");
-
       setContacts((prev) => prev.filter((c) => c._id !== id));
     } catch (err) {
-      alert(err.message);
+      if (err.response?.status === 401) {
+        logoutUser();
+        return;
+      }
+      alert(err.response?.data?.message || "Failed to delete contact");
     } finally {
       setDeletingId(null);
     }
@@ -116,20 +114,18 @@ const RightLog = () => {
     if (!token) return alert("Session expired.");
 
     try {
-      const response = await fetch(`http://localhost:5000/api/contacts/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(editFormData),
-      });
+      const response = await axios.put(
+        `${API_BASE_URL}/contacts/${id}`,
+        editFormData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      const updatedContact = await response.json();
-
-      if (!response.ok) {
-        throw new Error(updatedContact.message || "Failed to update contact");
-      }
+      const updatedContact = response.data;
 
       // Update state in real-time
       setContacts((prev) =>
@@ -137,7 +133,11 @@ const RightLog = () => {
       );
       setEditingId(null); // Exit edit mode
     } catch (err) {
-      alert(err.message);
+      if (err.response?.status === 401) {
+        logoutUser();
+        return;
+      }
+      alert(err.response?.data?.message || "Failed to update contact");
     }
   };
 
