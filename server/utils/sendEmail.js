@@ -8,6 +8,14 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  // ⚡ FIX: Force IPv4 to prevent Render ENETUNREACH errors
+  family: 4,
+  connectionTimeout: 10000, // 10 seconds timeout
+  greetingTimeout: 5000,
+  socketTimeout: 10000,
+  tls: {
+    rejectUnauthorized: false, // Prevents self-signed cert issues on cloud platforms
+  },
 });
 
 const sendEmail = async ({ to, subject, html }) => {
