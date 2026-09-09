@@ -1,164 +1,144 @@
-import API_BASE_URL, { getAuthHeaders, handleResponse } from '../../../services/apiClient';
+import axios from 'axios';
+import API_BASE_URL, { getAuthHeaders } from '../../../services/apiClient';
 
 const boardService = {
   // ================= BOARDS =================
   getBoards: async () => {
-    const res = await fetch(`${API_BASE_URL}/boards`, {
-      method: 'GET',
+    const res = await axios.get(`${API_BASE_URL}/boards`, {
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
+    return res.data;
   },
 
   createBoard: async (boardData) => {
-    const res = await fetch(`${API_BASE_URL}/boards`, {
-      method: 'POST',
+    const res = await axios.post(`${API_BASE_URL}/boards`, boardData, {
       headers: getAuthHeaders(),
-      body: JSON.stringify(boardData),
     });
-    return handleResponse(res);
+    return res.data;
   },
 
   getBoardDetails: async (boardId) => {
-    const res = await fetch(`${API_BASE_URL}/boards/${boardId}`, {
-      method: 'GET',
+    const res = await axios.get(`${API_BASE_URL}/boards/${boardId}`, {
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
+    return res.data;
   },
 
   updateBoard: async (boardId, updateData) => {
-    const res = await fetch(`${API_BASE_URL}/boards/${boardId}`, {
-      method: 'PATCH',
+    const res = await axios.patch(`${API_BASE_URL}/boards/${boardId}`, updateData, {
       headers: getAuthHeaders(),
-      body: JSON.stringify(updateData),
     });
-    return handleResponse(res);
+    return res.data;
   },
 
   deleteBoard: async (boardId) => {
-    const res = await fetch(`${API_BASE_URL}/boards/${boardId}`, {
-      method: 'DELETE',
+    const res = await axios.delete(`${API_BASE_URL}/boards/${boardId}`, {
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
+    return res.data;
   },
 
   // ================= LISTS =================
   createList: async (boardId, listData) => {
-    const res = await fetch(`${API_BASE_URL}/boards/${boardId}/lists`, {
-      method: 'POST',
+    const res = await axios.post(`${API_BASE_URL}/boards/${boardId}/lists`, listData, {
       headers: getAuthHeaders(),
-      body: JSON.stringify(listData),
     });
-    return handleResponse(res);
+    return res.data;
   },
 
   updateList: async (listId, updateData) => {
-    const res = await fetch(`${API_BASE_URL}/lists/${listId}`, {
-      method: 'PATCH',
+    const res = await axios.patch(`${API_BASE_URL}/lists/${listId}`, updateData, {
       headers: getAuthHeaders(),
-      body: JSON.stringify(updateData),
     });
-    return handleResponse(res);
+    return res.data;
   },
 
   deleteList: async (listId) => {
-    const res = await fetch(`${API_BASE_URL}/lists/${listId}`, {
-      method: 'DELETE',
+    const res = await axios.delete(`${API_BASE_URL}/lists/${listId}`, {
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
+    return res.data;
   },
 
   reorderList: async (listId, position) => {
-    const res = await fetch(`${API_BASE_URL}/lists/${listId}/reorder`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ position }),
-    });
-    return handleResponse(res);
+    const res = await axios.patch(
+      `${API_BASE_URL}/lists/${listId}/reorder`,
+      { position },
+      { headers: getAuthHeaders() }
+    );
+    return res.data;
   },
 
   // ================= TASKS =================
   createTask: async (listId, taskData) => {
-    const res = await fetch(`${API_BASE_URL}/lists/${listId}/tasks`, {
-      method: 'POST',
+    const res = await axios.post(`${API_BASE_URL}/lists/${listId}/tasks`, taskData, {
       headers: getAuthHeaders(),
-      body: JSON.stringify(taskData),
     });
-    return handleResponse(res);
+    return res.data;
   },
 
   getTaskDetails: async (taskId) => {
-    const res = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-      method: 'GET',
+    const res = await axios.get(`${API_BASE_URL}/tasks/${taskId}`, {
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
+    return res.data;
   },
 
   updateTask: async (taskId, updateData) => {
-    const res = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-      method: 'PATCH',
+    const res = await axios.patch(`${API_BASE_URL}/tasks/${taskId}`, updateData, {
       headers: getAuthHeaders(),
-      body: JSON.stringify(updateData),
     });
-    return handleResponse(res);
+    return res.data;
   },
 
   deleteTask: async (taskId) => {
-    const res = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-      method: 'DELETE',
+    const res = await axios.delete(`${API_BASE_URL}/tasks/${taskId}`, {
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
+    return res.data;
   },
 
   assignTask: async (taskId, userIds) => {
-    const res = await fetch(`${API_BASE_URL}/tasks/${taskId}/assign`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ userIds }),
-    });
-    return handleResponse(res);
+    const res = await axios.patch(
+      `${API_BASE_URL}/tasks/${taskId}/assign`,
+      { userIds },
+      { headers: getAuthHeaders() }
+    );
+    return res.data;
   },
 
   // ================= COMMENTS =================
   addComment: async (taskId, text) => {
-    const res = await fetch(`${API_BASE_URL}/tasks/${taskId}/comments`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ text }),
-    });
-    return handleResponse(res);
+    const res = await axios.post(
+      `${API_BASE_URL}/tasks/${taskId}/comments`,
+      { text },
+      { headers: getAuthHeaders() }
+    );
+    return res.data;
   },
 
   getCommentsByTask: async (taskId) => {
-    const res = await fetch(`${API_BASE_URL}/tasks/${taskId}/comments`, {
-      method: 'GET',
+    const res = await axios.get(`${API_BASE_URL}/tasks/${taskId}/comments`, {
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
+    return res.data;
   },
 
   deleteComment: async (commentId) => {
-    const res = await fetch(`${API_BASE_URL}/comments/${commentId}`, {
-      method: 'DELETE',
+    const res = await axios.delete(`${API_BASE_URL}/comments/${commentId}`, {
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
+    return res.data;
   },
 
-  // ================= Search =================
-globalSearch: async (query) => {
-    const res = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`, {
-      method: 'GET',
+  // ================= SEARCH =================
+  globalSearch: async (query) => {
+    const res = await axios.get(`${API_BASE_URL}/search`, {
+      params: { q: query },
       headers: getAuthHeaders(),
     });
-    return handleResponse(res);
+    return res.data;
   },
 };
-
 
 export default boardService;

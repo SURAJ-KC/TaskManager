@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { useFormik } from 'formik';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { apiRequest } from '../../services/apiClient';
-import { useState } from 'react';
+import axios from 'axios';
+
+// Resolve environment variable or fallback to live Render URL
+import {API_BASE_URL} from '../../services/apiClient';
 
 const validate = (values) => {
   const errors = {};
@@ -32,10 +35,13 @@ const SigninForm = () => {
     validate,
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       try {
-        const data = await apiRequest('/users/login', {
-          method: 'POST',
-          body: JSON.stringify(values),
+        const response = await axios.post(`${API_BASE_URL}/users/login`, values, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
+
+        const data = response.data;
 
         if (!data.accessToken) {
           throw new Error('Login succeeded without an access token.');
@@ -46,12 +52,17 @@ const SigninForm = () => {
 
         resetForm();
         
-        // 3. Clean redirect to Dashboard
+        // Clean redirect to Dashboard
         navigate('/dashboard');
 
       } catch (error) {
         console.error('Submission error:', error);
-        toast.error(error.message || 'Server error. Please ensure backend is running.');
+        
+        // Handle Axios HTTP error responses
+        const errorMessage =
+          error.response?.data?.message || error.message || 'Server error. Please ensure backend is running.';
+        
+        toast.error(errorMessage);
       } finally {
         setSubmitting(false);
       }

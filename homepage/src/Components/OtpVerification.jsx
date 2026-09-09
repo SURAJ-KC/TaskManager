@@ -1,246 +1,191 @@
-import { useState, useRef, useEffect } from "react";
-import { useFormik } from "formik";
-const OTP_LENGTH = 6;
-const TIMER_SECONDS = 60;
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import axios from "axios";
 
-const OtpVerification = ({ email, onVerificationSuccess }) => {
-  const [otp, setOtp] = useState(new Array(OTP_LENGTH).fill(""));
-  const [timer, setTimer] = useState(TIMER_SECONDS);
-  const [apiMessage, setApiMessage] = useState("");
-  const [apiError, setApiError] = useState("");
+import {API_BASE_URL} from '../services/apiClient';
 
-  const inputRefs = useRef([]);
+const ForgotPassword = () => {
+  const navigate = useNavigate();
 
-  // Derive canResend directly without extra state
-  const canResend = timer === 0;
+  // Step 1 = Request OTP, Step 2 = Verify OTP, Step 3 = New Password
+  const [step, setStep] = useState(1);
 
-  // Fixed Timer Effect (Removed non-existent 'step' variable)
-  useEffect(() => {
-    if (timer === 0) return;
+  // Form states
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-    const interval = setInterval(() => {
-      setTimer((prev) => prev - 1);
-    }, 1000);
+  // Status & UI states
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
-    return () => clearInterval(interval);
-  }, [timer]);
-
-  // Formik manages form submission state & validation
-  const formik = useFormik({
-    initialValues: { otpString: "" },
-    validate: () => {
-      const errors = {};
-      const enteredOtp = otp.join("");
-      if (enteredOtp.length !== OTP_LENGTH) {
-        errors.otpString = `Please enter all ${OTP_LENGTH} digits`;
-      }
-      return errors;
-    },
-    onSubmit: async (values, { setSubmitting }) => {
-      setApiError("");
-      setApiMessage("");
-
-      try {
-        const response = await fetch("http://localhost:5000/api/users/verify-otp", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, otp: otp.join("") }),
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || "Verification failed");
-
-        setApiMessage(data.message);
-        if (onVerificationSuccess) onVerificationSuccess(data);
-      } catch (err) {
-        setApiError(err.message);
-      } finally {
-        setSubmitting(false);
-      }
-    },
-  });
-
-  // Native input navigation logic
-  const handleChange = (element, index) => {
-    const value = element.value;
-    if (isNaN(value)) return;
-
-    const newOtp = [...otp];
-    newOtp[index] = value.substring(value.length - 1);
-    setOtp(newOtp);
-    formik.setFieldValue("otpString", newOtp.join(""));
-
-    if (value && index < OTP_LENGTH - 1) {
-      inputRefs.current[index + 1].focus();
-    }
-  };
-
-  const handleKeyDown = (e, index) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      inputRefs.current[index - 1].focus();
-    }
-  };
-
-  const handlePaste = (e) => {
+  // 1. Send OTP to user's email
+  const handleSendOtp = async (e) => {
     e.preventDefault();
-    const pasteData = e.clipboardData.getData("text").trim();
-    if (!/^\d+$/.test(pasteData)) return;
-
-    const digits = pasteData.slice(0, OTP_LENGTH).split("");
-    const newOtp = [...otp];
-
-    digits.forEach((digit, index) => {
-      newOtp[index] = digit;
-      if (inputRefs.current[index]) {
-        inputRefs.current[index].value = digit;
-      }
-    });
-
-    setOtp(newOtp);
-    formik.setFieldValue("otpString", newOtp.join(""));
-    const nextFocusIndex = Math.min(digits.length, OTP_LENGTH - 1);
-    inputRefs.current[nextFocusIndex]?.focus();
-  };
-
-  const handleResend = async () => {
-    if (!canResend) return;
-
-    setApiError("");
-    setApiMessage("");
+    if (!email) return setError("Please enter your email");
 
     try {
-      const response = await fetch("http://localhost:5000/api/users/resend-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+      setLoading(true);
+      setError("");
+
+      const response = await axios.post(`${API_BASE_URL}/users/forgot-password`, { email });
+
+      setMessage(response.data.message || "OTP has been sent to your email.");
+      setStep(2);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Failed to send OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2. Verify OTP code
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (!otp) return setError("Please enter the OTP");
+
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await axios.post(`${API_BASE_URL}/users/verify-reset-otp`, { email, otp });
+
+      setMessage(response.data.message || "OTP verified successfully. Enter your new password.");
+      setStep(3);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Invalid or expired OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 3. Reset password in database
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (!newPassword || !confirmPassword) return setError("Please fill all fields");
+    if (newPassword !== confirmPassword) return setError("Passwords do not match");
+
+    try {
+      setLoading(true);
+      setError("");
+
+      await axios.post(`${API_BASE_URL}/users/reset-password`, {
+        email,
+        otp,
+        newPassword,
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to resend OTP");
-
-      setApiMessage(data.message);
-      setTimer(TIMER_SECONDS); // Automatically sets canResend back to false
-      setOtp(new Array(OTP_LENGTH).fill(""));
-      formik.setFieldValue("otpString", "");
-      inputRefs.current[0]?.focus();
+      toast.success("Password updated successfully! Please log in.");
+      setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
-      setApiError(err.message);
+      setError(err.response?.data?.message || err.message || "Failed to reset password");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={styles.container}>
-      <h2>Email Verification</h2>
-      <p>Enter the 6-digit code sent to <strong>{email}</strong></p>
+    <div className="max-w-md mx-auto my-12 p-6 border border-white/20 rounded-2xl bg-gray-900/60 text-white backdrop-blur-md">
+      <h2 className="text-2xl font-bold text-center mb-6">Reset Password</h2>
 
-      {apiError && <div style={styles.error}>{apiError}</div>}
-      {apiMessage && <div style={styles.success}>{apiMessage}</div>}
-
-      <form onSubmit={formik.handleSubmit}>
-        <div style={styles.otpContainer} onPaste={handlePaste}>
-          {otp.map((digit, index) => (
-            <input
-              key={index}
-              type="text"
-              maxLength="1"
-              value={digit}
-              ref={(el) => (inputRefs.current[index] = el)}
-              onChange={(e) => handleChange(e.target, index)}
-              onKeyDown={(e) => handleKeyDown(e, index)}
-              style={styles.inputBox}
-            />
-          ))}
+      {error && (
+        <div className="bg-red-900/40 border border-red-500 text-red-300 text-sm p-3 rounded-xl mb-4 text-center">
+          {error}
         </div>
+      )}
 
-        {formik.touched.otpString && formik.errors.otpString && (
-          <div style={{ color: "red", marginBottom: "10px", fontSize: "14px" }}>
-            {formik.errors.otpString}
-          </div>
-        )}
+      {message && (
+        <div className="bg-green-900/40 border border-green-500 text-green-300 text-sm p-3 rounded-xl mb-4 text-center">
+          {message}
+        </div>
+      )}
 
-        <button type="submit" disabled={formik.isSubmitting} style={styles.submitBtn}>
-          {formik.isSubmitting ? "Verifying..." : "Verify OTP"}
-        </button>
-      </form>
-
-      <div style={styles.resendContainer}>
-        {canResend ? (
-          <button onClick={handleResend} style={styles.resendBtn} disabled={formik.isSubmitting}>
-            Resend OTP
-          </button>
-        ) : (
-          <p style={styles.timerText}>
-            Resend code in: <span>{timer}s</span>
+      {/* STEP 1: Request OTP */}
+      {step === 1 && (
+        <form onSubmit={handleSendOtp} className="flex flex-col gap-4">
+          <p className="text-xs text-gray-300 text-center">
+            Enter your email address and we will send you a verification OTP.
           </p>
-        )}
-      </div>
+          <input
+            type="email"
+            placeholder="Enter your registered email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="px-3 py-2 border border-white/20 rounded-xl bg-transparent text-white outline-none focus:border-purple-500 text-sm"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="h-10 rounded-xl bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 text-white font-semibold cursor-pointer disabled:opacity-50"
+          >
+            {loading ? "Sending..." : "Send OTP"}
+          </button>
+        </form>
+      )}
+
+      {/* STEP 2: Verify OTP */}
+      {step === 2 && (
+        <form onSubmit={handleVerifyOtp} className="flex flex-col gap-4">
+          <p className="text-xs text-gray-300 text-center">
+            Enter the 6-digit OTP sent to <span className="text-white font-semibold">{email}</span>
+          </p>
+          <input
+            type="text"
+            maxLength={6}
+            placeholder="Enter 6-digit OTP"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
+            className="px-3 py-2 text-center tracking-widest text-lg border border-white/20 rounded-xl bg-transparent text-white outline-none focus:border-purple-500"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="h-10 rounded-xl bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 text-white font-semibold cursor-pointer disabled:opacity-50"
+          >
+            {loading ? "Verifying..." : "Verify OTP"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setStep(1)}
+            className="text-xs text-gray-400 hover:text-white underline cursor-pointer"
+          >
+            Change Email
+          </button>
+        </form>
+      )}
+
+      {/* STEP 3: Set New Password */}
+      {step === 3 && (
+        <form onSubmit={handleResetPassword} className="flex flex-col gap-4">
+          <p className="text-xs text-gray-300 text-center">Enter your new password below.</p>
+          <input
+            type="password"
+            placeholder="New Password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className="px-3 py-2 border border-white/20 rounded-xl bg-transparent text-white outline-none focus:border-purple-500 text-sm"
+          />
+          <input
+            type="password"
+            placeholder="Confirm New Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="px-3 py-2 border border-white/20 rounded-xl bg-transparent text-white outline-none focus:border-purple-500 text-sm"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="h-10 rounded-xl bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 text-white font-semibold cursor-pointer disabled:opacity-50"
+          >
+            {loading ? "Updating..." : "Update Password"}
+          </button>
+        </form>
+      )}
     </div>
   );
 };
 
-const styles = {
-  container: {
-    maxWidth: "400px",
-    margin: "50px auto",
-    padding: "30px",
-    borderRadius: "8px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-    textAlign: "center",
-    fontFamily: "Arial, sans-serif",
-  },
-  otpContainer: {
-    display: "flex",
-    justifyContent: "space-between",
-    margin: "20px 0",
-  },
-  inputBox: {
-    width: "45px",
-    height: "50px",
-    fontSize: "20px",
-    textAlign: "center",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
-    outline: "none",
-  },
-  submitBtn: {
-    width: "100%",
-    padding: "12px",
-    fontSize: "16px",
-    backgroundColor: "#4CAF50",
-    color: "#fff",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-  },
-  resendContainer: {
-    marginTop: "20px",
-  },
-  resendBtn: {
-    background: "none",
-    border: "none",
-    color: "#007BFF",
-    cursor: "pointer",
-    fontSize: "14px",
-    textDecoration: "underline",
-  },
-  timerText: {
-    fontSize: "14px",
-    color: "#666",
-  },
-  error: {
-    color: "#D8000C",
-    backgroundColor: "#FFBABA",
-    padding: "10px",
-    borderRadius: "4px",
-    marginBottom: "15px",
-  },
-  success: {
-    color: "#4F8A10",
-    backgroundColor: "#DFF2BF",
-    padding: "10px",
-    borderRadius: "4px",
-    marginBottom: "15px",
-  },
-};
-
-export default OtpVerification;
+export default ForgotPassword;

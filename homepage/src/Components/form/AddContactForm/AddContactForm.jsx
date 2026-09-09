@@ -1,5 +1,8 @@
+import axios from 'axios';
 import { useFormik } from 'formik';
 import { getValidToken } from '../../../Utils/auth';
+
+import {API_BASE_URL} from '../../../services/apiClient';
 
 const validate = (values) => {
   const errors = {};
@@ -36,31 +39,24 @@ const AddContactForm = ({ onContactAdded }) => {
           return;
         }
 
-        const response = await fetch('http://localhost:5000/api/contacts', {
-          method: 'POST',
+        const response = await axios.post(`${API_BASE_URL}/contacts`, values, {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(values),
         });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Failed to add contact');
-        }
 
         alert('Contact added successfully!');
         resetForm();
 
         // Callback to refresh the contact list in parent component / RightLog
         if (onContactAdded) {
-          onContactAdded(data);
+          onContactAdded(response.data);
         }
       } catch (error) {
         console.error('Error adding contact:', error);
-        setFieldError('email', error.message);
+        const errorMessage = error.response?.data?.message || 'Failed to add contact';
+        setFieldError('email', errorMessage);
       } finally {
         setSubmitting(false);
       }
@@ -140,7 +136,6 @@ const AddContactForm = ({ onContactAdded }) => {
             <span className="text-red-400 text-xs mt-1 pl-1">{formik.errors.phone}</span>
           )}
         </div>
-
 
         {/* Submit Button */}
         <button

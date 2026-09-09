@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { useFormik } from 'formik';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import OtpVerification from '../OtpVerification';
+
+// Resolve environment variable or fallback to local backend URL
+import {API_BASE_URL} from '../../services/apiClient';
 
 const validate = (values) => {
   const errors = {};
@@ -66,27 +70,23 @@ const SignupPage = ({ onRegisterSuccess }) => {
       };
 
       try {
-        const response = await fetch('http://localhost:5000/api/users/register', {
-          method: 'POST',
+        const response = await axios.post(`${API_BASE_URL}/users/register`, payload, {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(payload),
         });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          setApiError(data.message || 'Registration failed');
-          return;
-        }
 
         setSubmittedUser(values);
         setRegisteredEmail(values.email);
         setStep(2);
       } catch (error) {
         console.error('Submission error:', error);
-        setApiError('Server error. Please try again later.');
+        // Axios handles HTTP errors directly inside error.response
+        if (error.response && error.response.data) {
+          setApiError(error.response.data.message || 'Registration failed');
+        } else {
+          setApiError('Server error. Please try again later.');
+        }
       } finally {
         setSubmitting(false);
       }

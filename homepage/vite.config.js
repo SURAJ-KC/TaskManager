@@ -4,10 +4,12 @@ import tailwindcss from '@tailwindcss/vite';
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(),tailwindcss()
-    
+  base: '/TaskManager/', // Added base path for GitHub Pages
+  plugins: [
+    react(),
+    tailwindcss()
   ],
-  server : {
+  server: {
     port: 5173,
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',

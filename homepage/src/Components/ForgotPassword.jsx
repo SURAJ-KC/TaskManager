@@ -1,6 +1,8 @@
-import  { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import axios from "axios";
+import {API_BASE_URL} from '../services/apiClient';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
@@ -28,22 +30,12 @@ const ForgotPassword = () => {
       setLoading(true);
       setError("");
 
-      const response = await fetch("http://localhost:5000/api/users/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
+      const response = await axios.post(`${API_BASE_URL}/users/forgot-password`, { email });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to send OTP");
-      }
-
-      setMessage("OTP has been sent to your email.");
+      setMessage(response.data.message || "OTP has been sent to your email.");
       setStep(2);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message || "Failed to send OTP");
     } finally {
       setLoading(false);
     }
@@ -58,22 +50,12 @@ const ForgotPassword = () => {
       setLoading(true);
       setError("");
 
-      const response = await fetch("http://localhost:5000/api/users/verify-reset-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp }),
-      });
+      const response = await axios.post(`${API_BASE_URL}/users/verify-reset-otp`, { email, otp });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Invalid or expired OTP");
-      }
-
-      setMessage("OTP verified successfully. Enter your new password.");
+      setMessage(response.data.message || "OTP verified successfully. Enter your new password.");
       setStep(3);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message || "Invalid or expired OTP");
     } finally {
       setLoading(false);
     }
@@ -89,22 +71,16 @@ const ForgotPassword = () => {
       setLoading(true);
       setError("");
 
-      const response = await fetch("http://localhost:5000/api/users/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp, newPassword }),
+      await axios.post(`${API_BASE_URL}/users/reset-password`, {
+        email,
+        otp,
+        newPassword,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to reset password");
-      }
-
-     toast.success("Password updated successfully! Please log in.");
+      toast.success("Password updated successfully! Please log in.");
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message || "Failed to reset password");
     } finally {
       setLoading(false);
     }
